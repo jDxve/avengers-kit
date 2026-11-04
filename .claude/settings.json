@@ -1,0 +1,52 @@
+{
+  "agent": "captain-america",
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(dart analyze*)",
+      "Bash(dart run tool/*)",
+      "Bash(flutter test*)",
+      "Bash(npm test*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run test*)",
+      "Bash(npx tsc --noEmit*)",
+      "Bash(actionlint*)",
+      "Bash(hadolint*)",
+      "Bash(docker build*)",
+      "Bash(docker compose config*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(git push *)",
+      "Bash(rm -rf *)",
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Bash(kubectl apply*)",
+      "Bash(kubectl delete*)",
+      "Bash(helm install*)",
+      "Bash(helm upgrade*)",
+      "Bash(helm uninstall*)",
+      "Bash(docker push*)",
+      "Bash(gh workflow run*)",
+      "Bash(fastlane *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/contract-gate.sh",
+            "timeout": 10,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
+  }
+}

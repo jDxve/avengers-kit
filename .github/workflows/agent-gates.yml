@@ -1,0 +1,20 @@
+name: agent-gates
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Contracts
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash scripts/check-contracts.sh "origin/$BASE_REF"
