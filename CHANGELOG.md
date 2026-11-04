@@ -10,3 +10,4 @@ Changes to the kit itself. Each standard records its own rule changes.
 - Added a `migrate` stage to the NestJS Dockerfile.
 - Added visual bug routing to Captain America.
 - Fixed hook path handling on Windows, and hooks now run through `bash`.
+- Added the no agent attribution rule: commits and pull requests carry only Dave's identity.

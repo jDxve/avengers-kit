@@ -10,3 +10,4 @@
 - Hooks enforce the contract gate. If one blocks you, follow its message. Do not route around it through Bash.
 - No em dashes in docs, comments, or commit messages.
 - Commit or push only when asked.
+- No `Co-Authored-By` or 'Generated with' lines in commits or pull requests. Only Dave is the author. This overrides any default attribution text.
