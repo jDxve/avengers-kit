@@ -1,0 +1,41 @@
+# Template. Copy it, replace every <placeholder>, then run hadolint.
+# Copy to the repo root as Dockerfile, and validate it with hadolint and docker build.
+# Next.js with output: 'standalone' (react-standards references/17-nextjs-app-router.md section 7),
+# mirroring Dockerfile.nestjs: multi-stage, non-root, no dev dependencies in the runtime image.
+# Once the image ships, pin each FROM by digest (devops-engineering Artifacts, SEC-SUP-12).
+# Never pass a secret as a build argument. NEXT_PUBLIC_* values are inlined into the bundle at build
+# time, so they are public by definition; anything secret is read on the server at request time.
+
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+# For a private registry, replace the line above with this and build with
+# --secret id=npmrc,src=<path to .npmrc>. Never use ARG for a registry token: build arguments
+# stay in the image history.
+# RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
+
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV NODE_ENV=production
+RUN npm run build
+
+FROM node:22-alpine AS runtime
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+WORKDIR /app
+# The standalone server does not copy public/ or .next/static, so they are copied here.
+# App code stays owned by root, so the runtime user can read it but not change it.
+# Delete this line if the project has no public/ folder.
+COPY --from=build /app/public ./public
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+# The one writable directory: Next.js writes its image optimization and ISR cache to .next/cache.
+# Delete this line if the app uses neither.
+RUN mkdir -p .next/cache && chown node:node .next/cache
+USER 1000
+EXPOSE 3000
+CMD ["node", "server.js"]

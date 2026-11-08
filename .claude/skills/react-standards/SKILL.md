@@ -4,6 +4,10 @@ description: Dave's React frontend standard. Use when writing, reviewing, or pla
 paths:
   - "src/**/*.tsx"
   - "app/**/*.tsx"
+  - "**/middleware.ts"
+  - "**/proxy.ts"
+  - "**/app/**/route.ts"
+  - "**/next.config.*"
 ---
 
 # React standards
@@ -37,6 +41,7 @@ The repo's established convention beats this standard. When they differ, follow 
 | Boundary, lint, and CI configuration | `12-enforcing-this-automatically.md` |
 | Which stack and adoption profile | `03-stack.md` |
 | Per-project decisions | `16-decisions-this-document-deliberately-doe.md` |
+| Next.js App Router: server components, caching, route handlers, server actions, middleware, cookie auth to NestJS | `17-nextjs-app-router.md` |
 
 ## Commands
 

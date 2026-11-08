@@ -1,0 +1,76 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to .github/workflows/ci-security.yml. Dependency audit and secret scan on every pull request
+# (devops-engineering CI; security-engineering references/40-supply-chain.md SEC-SUP-03).
+# Tools were decided by Dave under kit-skills OD-7 on 2026-11-08: npm audit for Node, osv-scanner
+# for Dart, gitleaks for secrets. Delete the audit job for a stack the repo does not have, and make
+# every remaining job required on main.
+# GitHub secret scanning with push protection complements gitleaks: it blocks a push that contains
+# a supported secret before it reaches the repository, where gitleaks reports it after. It is a
+# repository setting, not part of this file; Dave enables it where the plan allows.
+name: ci-security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action lists the pull request's commits to choose the range
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # fetch-depth 0 is needed so the commit range of a push or pull request can be scanned.
+          # Scheduled and manual (workflow_dispatch) runs scan the full history.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Secrets in history
+        uses: gitleaks/gitleaks-action@0000000000000000000000000000000000000000 # PIN gitleaks/gitleaks-action v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Comments would need pull-requests: write, and the report artifact would outlive the job.
+          # With both off, findings appear only in this job's log and summary, redacted.
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+          # Required only for repositories owned by an organization (gitleaks-action README).
+          # Add GITLEAKS_LICENSE to the repository secrets, then uncomment:
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  audit-node:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@0000000000000000000000000000000000000000 # PIN actions/setup-node v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+      # Reads package-lock.json. Fails on high and critical. Never npm audit fix in CI.
+      - run: npm audit --audit-level=high
+
+  audit-dart:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Installed by version through the Go module proxy, as in flutter-standards 16 11.2. The
+      # module needs a newer Go than the runner may have; Go's default GOTOOLCHAIN=auto fetches it.
+      # Exceptions (SEC-SUP-04) go in an osv-scanner config file passed with --config.
+      # Delete --lockfile=Gemfile.lock if the repo has no Gemfile.lock.
+      - name: Known-vulnerable dependencies (OSV, reads pubspec.lock and Gemfile.lock)
+        run: |
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
+          "$(go env GOPATH)/bin/osv-scanner" scan source --lockfile=pubspec.lock --lockfile=Gemfile.lock

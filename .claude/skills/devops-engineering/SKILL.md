@@ -67,6 +67,7 @@ If `docs/ops.md` is missing, propose it with: deployment target, instance count,
 | --- | --- |
 | Flutter | `flutter-standards`: `16-production-and-release.md` for flavors, CI, hardening, staged rollout, kill switches |
 | React | `react-standards`: `11-production-readiness.md`, and 11.9 in `12-enforcing-this-automatically.md` |
+| Next.js | `react-standards`: `17-nextjs-app-router.md`, and [assets/Dockerfile.nextjs](assets/Dockerfile.nextjs) |
 | NestJS | `nestjs-standards`: `10-production-readiness.md`, `08-multi-instance-gotchas.md`, `11-enforcing-this-automatically.md` |
 
 Mobile signing keys and store credentials never enter the repo. A shipped mobile build cannot be recalled, so its rollback is halt, kill switch, minimum version, and fix forward.
@@ -87,5 +88,4 @@ Passing these proves the config is valid, not that a deploy works. Say what can 
 
 ## Assets
 
-- [assets/Dockerfile.nestjs](assets/Dockerfile.nestjs) and [assets/dockerignore](assets/dockerignore): a starting point. Copy them to the repo root as `Dockerfile` and `.dockerignore`.
-- [assets/runbook-template.md](assets/runbook-template.md): for anything Dave runs against a live system.
+Templates for Dockerfiles, CI, Dependabot, mobile release, Fastlane, and runbooks, with what to copy and replace in each: [assets/README.md](assets/README.md).

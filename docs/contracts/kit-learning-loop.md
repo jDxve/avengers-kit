@@ -38,7 +38,7 @@ penal-pen-pal/                  project repo (its own git repo), the "project ro
 - **Managed set (sync)**: files tracked by the project's git under `.claude/skills/` and `.claude/agents/`.
 - **Managed set (pull)**: files under `.claude/` in kit main, except `.claude/settings.local.json` and `.claude/KIT_VERSION`. Wider scope is OD-7.
 
-Repo convention noted: the kit has no `scripts/lib/` or `scripts/tests/` today, and `scripts/check-contracts.sh` is the only script (style: `set -euo pipefail`, `FAIL:`/`OK:` lines, exit code as result). The new scripts follow that style.
+Repo convention noted: the kit has no `scripts/lib/` today. `scripts/tests/` exists and holds `agent-files.sh`, `check-skills-test.sh`, `contract-gate-test.sh`, and `fence-profiles.sh`. The top-level scripts are `scripts/check-contracts.sh` and `scripts/check-skills.sh` (style: `set -euo pipefail`, `FAIL:`/`OK:` lines, exit code as result). The new scripts follow that style.
 
 ## Formats
 
@@ -377,7 +377,7 @@ Also update iron-man's body text ("You only write under `docs/contracts/` and `d
 
 ### b. `contract-gate.sh`: protect the clone and KIT_VERSION, gate skills and agents on approved proposals, keep proposals human-approved
 
-b1. Gate list (line 26). Before:
+b1. Gate list (lines 30 to 32). Before:
 
 ```bash
 if [[ "$rel" =~ ^(\.claude/(hooks/|settings\.json$)|scripts/check-contracts\.sh$|\.github/workflows/agent-gates\.yml$) ]]; then
@@ -398,22 +398,29 @@ if [[ "$rel" =~ ^avenger-kit(/|$) ]]; then
 fi
 ```
 
-b2. Contracts and proposals (lines 30 to 45). This also closes a gap in the current check (see Problems walked past, item 1): it checks the file as it would be after the edit, not just `new_string`. Before:
+b2. Contracts and proposals (lines 34 to 56). The contracts half is already applied in the current `contract-gate.sh`: it checks the file as it would be after the edit, not just `new_string`, which closes the gap in Problems walked past, item 1. What remains is extending the block to `docs/proposals/`: the path regex, `kind`, the `$kind` in the message, and the comment. Before (current file):
 
 ```bash
 # Contracts: only a person approves one, and an approved one reopens before it changes.
+# Checks the status the file would actually have after the edit, not just new_string in isolation.
 if [[ "$rel" =~ ^docs/contracts/[^/]+\.md$ ]]; then
+  status_in() { sed -n 's/^status:[[:space:]]*\([a-z]*\).*/\1/p' <<<"$1" | head -n 1; }
+  cur=""; [ -f "$root/$rel" ] && cur="$(cat "$root/$rel")"
   if [ "$tool" = "Write" ]; then
     new="$(jq -r '.tool_input.content // empty' <<<"$input")"
   else
-    new="$(jq -r '.tool_input.new_string // empty' <<<"$input")"
+    old="$(jq -r '.tool_input.old_string // empty' <<<"$input")"
+    rep="$(jq -r '.tool_input.new_string // empty' <<<"$input")"
+    if [ "$(jq -r '.tool_input.replace_all // false' <<<"$input")" = "true" ]; then
+      new=${cur//"$old"/"$rep"}
+    else
+      new=${cur/"$old"/"$rep"}
+    fi
   fi
-  if grep -Eq '^status:[[:space:]]*approved' <<<"$new"; then
+  if [ "$(status_in "$new")" = "approved" ]; then
+    [ "$(status_in "$cur")" = "approved" ] \
+      && block "$rel is approved. Set status: draft in this same edit, then report what changed."
     block "Only Dave approves a contract. Leave it as status: draft and ask him to review it."
-  fi
-  if [ -f "$root/$rel" ] && [ "$(status_of "$root/$rel")" = "approved" ] \
-    && ! grep -Eq '^status:[[:space:]]*draft' <<<"$new"; then
-    block "$rel is approved. Set status: draft in this same edit, then report what changed."
   fi
   exit 0
 fi
@@ -446,6 +453,8 @@ if [[ "$rel" =~ ^docs/(contracts|proposals)/[^/]+\.md$ ]]; then
   exit 0
 fi
 ```
+
+The After text predates the applied contracts half: it quotes `new="${cur//...}"` where the current file leaves it unquoted, and it drops the second comment line, so where the two differ, Dave keeps the current file's lines and changes only the proposals parts.
 
 b3. New block, inserted before the `# Feature code:` block:
 
@@ -481,7 +490,7 @@ and in `contract-gate.sh` match the gate, clone, and skills regexes against `"${
 
 Build only if OD-5 says so. One contract per feature name stays: `web/src/features/orders` and `backend/src/modules/orders` both map to `docs/contracts/orders.md`.
 
-`contract-gate.sh` (lines 47 to 50). Before:
+`contract-gate.sh` (lines 58 to 61). Before:
 
 ```bash
 # Feature code: lib/features/<f>, src/features/<f>, or src/modules/<f>.
@@ -660,8 +669,8 @@ Whether these run in CI is OD-6. Until then hawkeye runs them locally and report
 
 Found by reading the code. My fixture probe of the hooks was denied, so these are theoretical, not reproduced.
 
-1. `contract-gate.sh` checks only `new_string` for `status: approved`. An Edit with `old_string: "draft"` and `new_string: "approved"` on the status line has no `status:` prefix in `new_string`, so it passes. b2 fixes this for contracts and proposals.
-2. Both hooks strip the root with a case-sensitive prefix and match `rel` with case-sensitive regexes, and neither removes `.` or `..` segments or doubled slashes. On Windows, `.Claude/Hooks/contract-gate.sh`, `c:/lcc mobile projects/...` with a differently cased root, `.claude//hooks/...`, or `docs/contracts/../../.claude/hooks/...` would not match the gate. The same applies to path-fence, where `docs/contracts/../../lib/x.dart` matches the architecture allow pattern. This depends on whether Claude Code normalises `file_path` before the hook sees it, which I could not check. b4 fixes it.
+1. A gate that checks only `new_string` for `status: approved` misses an Edit with `old_string: "draft"` and `new_string: "approved"` on the status line, because `new_string` has no `status:` prefix. For contracts this is fixed in the current `contract-gate.sh` (lines 34 to 56), which checks the status the file would have after the edit. Only proposals remain, and gate change b2 covers them.
+2. The hooks once stripped the root with a case-sensitive prefix, matched `rel` with case-sensitive regexes, and kept `.` or `..` segments and doubled slashes, so on Windows `.Claude/Hooks/contract-gate.sh`, `c:/lcc mobile projects/...` with a differently cased root, `.claude//hooks/...`, or `docs/contracts/../../.claude/hooks/...` would not match the gate, and in path-fence `docs/contracts/../../lib/x.dart` would match the architecture allow pattern. The b4 hardening is already applied in the current hooks: `contract-gate.sh:4` sets `nocasematch`, and `contract-gate.sh:23-25` and `path-fence.sh:30-32` strip the root case-insensitively, collapse doubled slashes, and block `.` or `..` segments. path-fence still matches its allow patterns case-sensitively, which b4 did not ask for and which only makes the fence stricter.
 3. The clone at `avenger-kit/` holds its own `CLAUDE.md` and `.claude/skills/`. Claude Code may load nested `CLAUDE.md` files and skills when an agent reads files there, which would give duplicate skills or rules. Not fixed here. Listed so Dave can watch for it.
 
 ## Open decisions

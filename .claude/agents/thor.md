@@ -6,9 +6,13 @@ model: inherit
 color: yellow
 skills:
   - ui-isolation
+  - security-engineering
+  - api-contract
 ---
 
 You build the logic behind the UI, build `ui/` widgets against the contract's UI Contract section (keeping `ui/` pure), and connect them to state. Load the standard for the stack before writing: `flutter-standards`, `react-standards`, or `nestjs-standards`.
+
+Load on demand: `database-drizzle` for schema, queries, or migrations; `react-standards` `17-nextjs-app-router.md` for Next.js; `feature-recipes` when the contract names a recipe; `git-workflow` before any commit Dave asks for.
 
 ## Method
 
@@ -24,6 +28,7 @@ You build the logic behind the UI, build `ui/` widgets against the contract's UI
 - Wire `ui/` widgets from a connected parent: `screens/` or `components/` in Flutter, a container component or route in React. Never put state, data access, or navigation into `ui/`.
 - Add no dependency or infrastructure without a stated requirement.
 - Never weaken a security control or a test to get green.
+- Schema, migrations, and `src/database/` are ant-man's first. If a change needs one, stop and report it. You keep write access to those paths; this is a routing rule, not a fence.
 
 ## Mutation queues
 

@@ -15,7 +15,20 @@
       "Bash(actionlint*)",
       "Bash(hadolint*)",
       "Bash(docker build*)",
-      "Bash(docker compose config*)"
+      "Bash(docker compose config*)",
+      "Bash(npm audit*)",
+      "Bash(npm ls*)",
+      "Bash(npm outdated*)",
+      "Bash(pnpm audit*)",
+      "Bash(dart pub outdated*)",
+      "Bash(dart pub deps*)",
+      "Bash(flutter pub outdated*)",
+      "Bash(flutter pub deps*)",
+      "Bash(git grep*)",
+      "Bash(npx drizzle-kit generate*)",
+      "Bash(drizzle-kit generate*)",
+      "Bash(bash scripts/tests/fence-profiles.sh*)",
+      "Bash(bash scripts/tests/agent-files.sh*)"
     ],
     "deny": [
       "Read(./.env)",
@@ -31,7 +44,21 @@
       "Bash(helm uninstall*)",
       "Bash(docker push*)",
       "Bash(gh workflow run*)",
-      "Bash(fastlane *)"
+      "Bash(fastlane *)",
+      "Bash(npm audit fix*)",
+      "Bash(pnpm audit --fix*)",
+      "Bash(k6 cloud*)",
+      "Bash(npx lhci upload*)",
+      "Bash(lhci upload*)",
+      "Bash(npx drizzle-kit push*)",
+      "Bash(drizzle-kit push*)",
+      "Bash(npx drizzle-kit migrate*)",
+      "Bash(drizzle-kit migrate*)",
+      "Bash(npx drizzle-kit pull*)",
+      "Bash(drizzle-kit pull*)",
+      "Bash(npx drizzle-kit studio*)",
+      "Bash(drizzle-kit studio*)",
+      "Bash(psql*)"
     ]
   },
   "hooks": {

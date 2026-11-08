@@ -1,9 +1,16 @@
 .git
 .github
 .claude
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+**/.npmrc
+# Re-include a public CA bundle with !path/to/bundle.pem; never disable certificate verification instead.
+**/*.pem
+**/*.key
+**/*.p12
+**/*.jks
+**/*.keystore
 node_modules
 dist
 coverage

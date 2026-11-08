@@ -1,0 +1,182 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to .github/workflows/release-mobile.yml, with fastlane/ at the repo root (assets/fastlane/).
+# Uploads a Flutter release to Play internal testing and TestFlight only (devops-engineering
+# Artifacts). Production is a promotion Dave does in the store consoles, never this workflow.
+# Agents write and validate this file; they never run it or push the tag that starts it.
+#
+# Dave configures before the first tag:
+# - Environment "mobile-release" with Dave as required reviewer, and deployment tags limited to v*.
+#   GitHub documents that required reviewers on Free, Pro, and Team plans exist only for public
+#   repositories; on a private repository there, record the gap in docs/ops.md.
+# - Environment secrets, by these names only: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+#   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD, PLAY_SERVICE_ACCOUNT_JSON_BASE64, ASC_KEY_ID,
+#   ASC_ISSUER_ID, ASC_KEY_P8_BASE64, plus the iOS signing material the app's setup needs (the
+#   skeleton in the ios job names IOS_DIST_CERT_P12_BASE64, IOS_DIST_CERT_PASSWORD, and
+#   IOS_PROVISIONING_PROFILE_BASE64). Optional, only if fastlane match is used: MATCH_PASSWORD and
+#   MATCH_GIT_BASIC_AUTHORIZATION.
+# - Use environment secrets on mobile-release only, never repository or organization secrets.
+# - When approving, check that the tagged commit is on main.
+# - Restrict creating, updating, and deleting v* tags to the release owner with a tag ruleset.
+# - A Gemfile and Gemfile.lock pinning fastlane, committed at the repo root.
+name: release-mobile
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-mobile
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: '<pinned Flutter version, the same as ci-flutter.yml>'
+
+jobs:
+  # Re-runs the PR checks on the tagged commit instead of trusting the PR run (flutter-standards 16).
+  verify:
+    uses: ./.github/workflows/ci-flutter.yml
+
+  android:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: mobile-release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # all branches and history, so origin/main is present for the next step
+          persist-credentials: false
+      # Runs before any secret is used. It catches a tag pushed by accident on a commit outside main,
+      # not a malicious tagger, who can still push to main or move the tag.
+      - name: Tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: actions/setup-java@0000000000000000000000000000000000000000 # PIN actions/setup-java v6.2.0
+        with:
+          distribution: temurin
+          java-version: '<Java version the Android build needs>'
+      - uses: subosito/flutter-action@0000000000000000000000000000000000000000 # PIN subosito/flutter-action v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: false # caches are not restored into jobs that hold signing secrets
+      - uses: ruby/setup-ruby@0000000000000000000000000000000000000000 # PIN ruby/setup-ruby v1.338.0
+        with:
+          bundler-cache: false # caches are not restored into jobs that hold signing secrets
+      - name: Install fastlane from Gemfile.lock
+        run: bundle config set --local frozen true && bundle install
+      - run: flutter pub get --enforce-lockfile
+
+      # The keystore exists only in the runner's temp directory for this job. The app's Gradle
+      # signing config reads the path and passwords from these environment variable names.
+      - name: Write the upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+      - name: Release bundle (obfuscated, symbols split)
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/upload.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        # config/prod.json: public values only; anything in this file is extractable from the shipped binary.
+        run: |
+          flutter build appbundle --flavor prod --release \
+            --dart-define-from-file=config/prod.json \
+            --obfuscate --split-debug-info=build/symbols
+      - name: Remove the keystore after the build
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+      # <upload build/symbols to the crash reporter the project uses>
+      - name: Upload to Play internal testing
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: bundle exec fastlane android internal
+      - name: Remove the keystore (backstop when a step fails)
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+
+  ios:
+    needs: verify
+    runs-on: macos-15
+    timeout-minutes: 60
+    environment: mobile-release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # all branches and history, so origin/main is present for the next step
+          persist-credentials: false
+      # Runs before any secret is used. It catches a tag pushed by accident on a commit outside main,
+      # not a malicious tagger, who can still push to main or move the tag.
+      - name: Tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: subosito/flutter-action@0000000000000000000000000000000000000000 # PIN subosito/flutter-action v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: false # caches are not restored into jobs that hold signing secrets
+      - uses: ruby/setup-ruby@0000000000000000000000000000000000000000 # PIN ruby/setup-ruby v1.338.0
+        with:
+          bundler-cache: false # caches are not restored into jobs that hold signing secrets
+      - name: Install fastlane from Gemfile.lock
+        run: bundle config set --local frozen true && bundle install
+      - run: flutter pub get --enforce-lockfile
+
+      # iOS signing is per app (devops-engineering Artifacts). Uncomment and adapt this skeleton.
+      # Everything is written under $RUNNER_TEMP, and the keychain password is random per run.
+      # If the app uses fastlane match instead, call it with readonly: true, and pass MATCH_PASSWORD
+      # and MATCH_GIT_BASIC_AUTHORIZATION from environment secrets in the step's env.
+      # - name: Install the signing certificate and provisioning profile
+      #   env:
+      #     IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+      #     IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+      #     IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      #   run: |
+      #     umask 077
+      #     KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+      #     KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+      #     printf '%s' "$IOS_DIST_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+      #     printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/app.mobileprovision"
+      #     security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+      #     security set-keychain-settings -lut 21600 "$KEYCHAIN"
+      #     security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+      #     # Exception: the p12 passphrase is a command argument because `security import` offers
+      #     # only -P or a GUI prompt, with no stdin or file option (man security: "-P passphrase
+      #     # Specify the unwrapping passphrase immediately. The default is to obtain a secure
+      #     # passphrase via GUI."), and a runner has no GUI. Safeguards: an ephemeral GitHub-hosted
+      #     # runner (macos-15) with no other tenant processes; no set -x; GitHub masks the secret
+      #     # in logs; the value comes from a secret in a job bound to the mobile-release
+      #     # environment (environment secrets only, see the header); the p12 is written under
+      #     # $RUNNER_TEMP with umask 077 and deleted in this step right after the keychain setup;
+      #     # the keychain and p12 are deleted again in the if: always() cleanup step.
+      #     # Never use this pattern on a self-hosted or shared runner.
+      #     security import "$RUNNER_TEMP/dist.p12" -P "$IOS_DIST_CERT_PASSWORD" -t cert -f pkcs12 \
+      #       -k "$KEYCHAIN" -T /usr/bin/codesign
+      #     security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+      #     security list-keychain -d user -s "$KEYCHAIN"
+      #     rm -f "$RUNNER_TEMP/dist.p12"
+      #     mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+      #     cp "$RUNNER_TEMP/app.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+      - name: Release IPA (obfuscated, symbols split)
+        # config/prod.json: public values only; anything in this file is extractable from the shipped binary.
+        run: |
+          flutter build ipa --flavor prod --release \
+            --dart-define-from-file=config/prod.json \
+            --obfuscate --split-debug-info=build/symbols \
+            --export-options-plist=ios/ExportOptions.plist
+      # <upload build/symbols to the crash reporter the project uses>
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: bundle exec fastlane ios internal
+      # - name: Remove the signing keychain and profile
+      #   if: always()
+      #   run: |
+      #     security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
+      #     rm -f "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/app.mobileprovision" \
+      #       "$HOME/Library/MobileDevice/Provisioning Profiles/app.mobileprovision"

@@ -1,0 +1,8 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to fastlane/Appfile. actionlint checks release-mobile.yml, the workflow that uses this file.
+# Identifiers only. No key file path, password, or Apple ID credential here: the lanes in Fastfile
+# read credentials from environment variables set from CI secrets.
+
+package_name("<Android application id of the prod flavor>")
+app_identifier("<iOS bundle identifier of the prod flavor>")
+team_id("<Apple Developer team id>")

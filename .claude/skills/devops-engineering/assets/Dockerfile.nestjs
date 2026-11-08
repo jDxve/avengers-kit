@@ -1,7 +1,21 @@
+# Template. Copy it, replace every <placeholder>, then run hadolint.
+# Copy to the repo root as Dockerfile, and validate it with hadolint and a docker build of the
+# runtime and migrate targets.
+# NestJS (nestjs-standards references/10-production-readiness.md): multi-stage, non-root, no dev
+# dependencies in the runtime image. The migrate target keeps drizzle-kit and runs once per deploy
+# as a job, never as a service (devops-engineering Database).
+# Once the image ships, pin each FROM by digest (devops-engineering Artifacts, SEC-SUP-12).
+# Never pass a secret as a build argument. Config and secrets come from the environment at runtime
+# and are validated at boot (devops-engineering Config and secrets).
+
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+# For a private registry, replace the line above with this and build with
+# --secret id=npmrc,src=<path to .npmrc>. Never use ARG for a registry token: build arguments
+# stay in the image history.
+# RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
 COPY . .
 RUN npm run build && npm prune --omit=dev
 
@@ -9,17 +23,25 @@ FROM node:22-alpine AS migrate
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY --chown=node:node drizzle.config.ts ./
-COPY --chown=node:node drizzle ./drizzle
+# For a private registry, replace the line above with this and build with
+# --secret id=npmrc,src=<path to .npmrc>. Never use ARG for a registry token: build arguments
+# stay in the image history.
+# RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
+# Migration files stay owned by root and read-only to the runtime user: drizzle-kit migrate reads
+# drizzle.config.ts and drizzle/ and writes only to the database, never to the filesystem.
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
 USER 1000
-CMD ["npx", "drizzle-kit", "migrate"]
+CMD ["npx", "--no-install", "drizzle-kit", "migrate"]
 
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=build --chown=node:node /app/package.json ./
-COPY --from=build --chown=node:node /app/node_modules ./node_modules
-COPY --from=build --chown=node:node /app/dist ./dist
+# App code stays owned by root, so the runtime user can read it but not change it.
+# The app writes nothing to disk, so no directory is made writable.
+COPY --from=build /app/package.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
 USER 1000
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

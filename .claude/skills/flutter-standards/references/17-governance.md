@@ -124,6 +124,13 @@ Semantic versioning, applied to rules rather than code:
 
 Each entry says what changed and what an existing app must do about it.
 
+#### 2.2.1-rc.1
+
+2026-11-08. Corrects the CI example in §11.2. Patch: no rule changes, so an existing app needs no change.
+
+- **Fixed:** the §11.2 example pins `actions/checkout` to a full SHA (v7.0.1) with `persist-credentials: false`, and every other action uses the zero-SHA `# PIN` placeholder, so the example no longer contradicts the action pinning rule. It points to `devops-engineering/assets/ci-flutter.yml` and `release-mobile.yml` as the maintained templates.
+- **Fixed:** the §11.2 example matches `ci-security.yml` and `ci-flutter.yml`: the `security` job grants `contents: read` and `pull-requests: read` and turns off gitleaks comments and artifact upload, and `verify` validates Gradle wrapper jars.
+
 #### 2.2.0-rc.1
 
 Sets Riverpod as the default state library. Minor: existing Flutter rules apply as before.

@@ -1,0 +1,41 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to fastlane/Fastfile. actionlint checks release-mobile.yml, the workflow that calls these lanes.
+# Lanes upload to internal testing only: the Play internal track and TestFlight. Promotion to
+# production is Dave's, in the store consoles (devops-engineering Artifacts).
+# Credentials come from environment variables set from CI secrets by name, never from a file in the
+# repo. Agents write this file and never run fastlane; settings deny it.
+
+require "base64"
+
+default_platform(:android)
+
+platform :android do
+  desc "Upload the release bundle to the Play internal testing track"
+  lane :internal do
+    upload_to_play_store(
+      track: "internal", # the action's default track is production, so it is always set here
+      aab: "<path to the .aab that flutter build appbundle wrote>",
+      json_key_data: Base64.decode64(ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON_BASE64")),
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
+
+platform :ios do
+  desc "Upload the release IPA to TestFlight"
+  lane :internal do
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_P8_BASE64"),
+      is_key_content_base64: true
+    )
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "<path to the .ipa that flutter build ipa wrote>",
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

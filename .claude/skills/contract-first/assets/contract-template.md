@@ -29,11 +29,23 @@ abstract interface class OrdersRepository {
 
 ## API
 
-Endpoints, or a link to the OpenAPI operation. Error codes the client branches on.
+Endpoints, or a link to the OpenAPI operation. Error codes the client branches on. Link the OpenAPI operation. See `api-contract`.
 
 ## Authorization
 
 Who may do each operation, and what ownership or tenant scope applies to each lookup. Write "public" where that is the decision.
+
+## Security
+
+Delete only if the feature crosses no trust boundary, and say so. See `security-engineering`.
+
+| Boundary | Threat (STRIDE) | Abuse case | Control | Test |
+| --- | --- | --- | --- | --- |
+| client to `POST /orders/:id/cancel` | Elevation of privilege | User B cancels user A's order | Lookup scoped to owner (SEC-API-01) | B gets 404 for A's order id |
+
+- Sensitive data, and where it must never appear (logs, URLs, analytics, crash reports, push payloads):
+- Rate limits:
+- Checklist items that apply (`SEC-*` ids):
 
 ## State
 

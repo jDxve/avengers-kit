@@ -14,7 +14,7 @@ Give the kit every skill a full-stack team needs (Flutter mobile, React and Next
 
 Out of scope:
 
-- Creating or renaming agents. `doctor-strange` and the other new agents are defined in `docs/contracts/kit-extra-agents.md`, which owns their names, tools, fences, and bodies. This contract only adds `skills:` lines and one "Load on demand" line to agent files.
+- Creating or renaming agents. `shuri` and the other new agents are defined in `docs/contracts/kit-extra-agents.md`, which owns their names, tools, fences, and bodies. This contract only adds `skills:` lines and one "Load on demand" line to agent files.
 - Editing `docs/contracts/kit-extra-agents.md` or `docs/contracts/kit-learning-loop.md`.
 - Installing any tool the skills describe (Playwright, gitleaks, osv-scanner, OpenTelemetry, Fastlane). A skill teaches how; a project adds the tool when its own contract states the need (AGENTS.md rule 6).
 - Running anything the delivery templates describe. Agents write templates; Dave runs them (AGENTS.md rule 10; settings already deny `fastlane *`, `docker push*`, `gh workflow run*`).
@@ -38,11 +38,12 @@ Read from the code, not assumed:
 - Next.js: `react-standards` 05 4.2 (server components and the client boundary), 04 (App Router layout, `api/` route handlers), 03 (platform applicability). There is no guidance on caching semantics, revalidation, middleware, server actions, or cookie auth to a NestJS backend.
 - Drizzle: `nestjs-standards` 05 4.4 and `devops-engineering` Database. Schema lives in `src/modules/<domain>/schema/`, migrations in root `drizzle/` (`nestjs-standards` 04). There is no guidance on soft delete or tenant scoping beyond the IDOR rule.
 - `devops-engineering/assets/` holds `Dockerfile.nestjs`, `dockerignore`, `runbook-template.md`. Its SKILL.md is 91 lines, so new asset rows would push it to the cap.
-- `.github/workflows/agent-gates.yml` pins `actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0`.
+- `.github/workflows/agent-gates.yml` pins `actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0` (read 2026-11-08). The kit's verified checkout SHA is now `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1` (Dave, 2026-11-08): v4.4.0 runs on node20, which GitHub removed from hosted runners on 2026-09-23, and v7.0.1 runs on node24. nick-fury verified the SHA with `git ls-remote` and the tag's `action.yml` on 2026-11-08. `agent-gates.yml` is a gate, so moving it is Dave's edit (Problems walked past 8).
 - `scripts/check-contracts.sh` is the only script: `set -euo pipefail`, `FAIL:` and `OK:` lines, exit code as result. The lint follows it.
 - One en dash exists in the kit today: `.claude/skills/flutter-standards/references/02-quick-start.md` line 44 (between `patterns 1` and `3`, byte sequence `E2 80 93`). No em dashes.
 - `flutter-standards/references/13-tooling-and-enforcement.md` line 568 holds `]([^'"]+)` inside a code block, which a naive link check would read as a broken link.
-- `kit-extra-agents.md` (draft, read on 2026-11-04) still names the UI/UX agent `jarvis`, with `skills: contract-first, ui-isolation`, and suggests `wong` (technical writer), `heimdall` (security auditor), `quicksilver` (performance and end-to-end QA). Dave has since decided the UI/UX agent is `doctor-strange`. This contract uses `doctor-strange`, and uses the other three names only as that contract's current suggestions.
+- `kit-extra-agents.md` (draft, re-read on 2026-11-04 after its roster revision) now builds the six agents in Dave's org chart, all named by him: `vision` (requirements and analysis), `shuri` (UI/UX design, section A, formerly drafted as `doctor-strange`), `ant-man` (database), `black-panther` (security, section C, formerly `heimdall`), `spider-man` (exploratory testing), and `quicksilver` (performance, section D, narrowed from performance plus end-to-end QA). Its section B, a technical writer suggested as `wong`, is struck permanently (`kit-extra-agents` OD-16, decided) because the role is not in the chart, and that section is deleted. This contract uses those six names and keeps the writer's rows, marked as never applied.
+- `kit-extra-agents.md` F.1 preloads `database-drizzle` on `ant-man`, so that agent file cannot ship with its `skills:` line until this contract's Phase 2 lands, or lint K2 fails. Its Order of operations names this and its build item F-3 asks this contract for the `vision`, `ant-man`, and `spider-man` Assignment rows below.
 
 ## Decisions
 
@@ -66,10 +67,13 @@ Preload means the skill is in the agent's frontmatter `skills:` list, so its SKI
 | `hawkeye` | `testing-strategy` | `security-engineering`, `observability-and-debugging`; `api-contract` (deviation); stack testing sections (existing) |
 | `black-widow` | `ui-isolation` (existing), `security-engineering`, `testing-strategy` | `api-contract`; `database-drizzle` (deviation); `refactoring-playbook` (deviation); stack review sections (existing) |
 | `nick-fury` | `devops-engineering` (existing, now with the delivery assets), `security-engineering` | `git-workflow`; `observability-and-debugging` (deviation) |
-| `doctor-strange` | `ui-ux-design`, `ui-isolation`, `contract-first` (deviation: kept from `kit-extra-agents` A.1) | `security-engineering`; stack accessibility sections |
-| technical writer (suggested `wong`, name owned by `kit-extra-agents`) | none | `api-contract`, `git-workflow`, `devops-engineering` (runbook template) |
-| security auditor (suggested `heimdall`, name owned by `kit-extra-agents`) | `security-engineering` | `api-contract`, `database-drizzle`, `observability-and-debugging`; stack security sections |
-| performance and end-to-end QA (suggested `quicksilver`, name owned by `kit-extra-agents`) | `testing-strategy` | `observability-and-debugging`; stack performance sections |
+| `vision` | none | `contract-first`; `database-drizzle`; `feature-recipes`; `api-contract`; stack standards |
+| `shuri` | `ui-ux-design`, `ui-isolation`, `contract-first` (deviation: kept from `kit-extra-agents` A.1) | `security-engineering`; stack accessibility sections |
+| `ant-man` | `database-drizzle` (existing in `kit-extra-agents` F.1) | `security-engineering`, `api-contract`, `testing-strategy`; `nestjs-standards` 4.4 and 04 |
+| `spider-man` | `testing-strategy` | `security-engineering`, `observability-and-debugging`; `api-contract`; stack testing sections |
+| `quicksilver` | `testing-strategy` | `observability-and-debugging`; `database-drizzle` (deviation); stack performance sections |
+| `black-panther` | `security-engineering` | `api-contract`, `database-drizzle`, `observability-and-debugging`; stack security sections |
+| technical writer (suggested `wong`, struck permanently (`kit-extra-agents` OD-16, decided), never applied) | none | `api-contract`, `git-workflow`, `devops-engineering` (runbook template) |
 
 ### Rationale per agent
 
@@ -80,10 +84,13 @@ Preload means the skill is in the agent's frontmatter `skills:` list, so its SKI
 - **hawkeye** writes every test, so it preloads `testing-strategy`. It loads `security-engineering` for abuse-case tests and `observability-and-debugging` for the log-to-failing-test route. Deviation: `api-contract` on demand, because contract tests (OpenAPI diff, generated types, Flutter DTO fixtures) are its job.
 - **black-widow** checks security and test honesty on every diff (its steps 5 and 6), so it preloads both. Deviations: `database-drizzle` on demand for diffs that touch schema or migrations, and `refactoring-playbook` on demand for hulk's diffs, where the question is "did behavior change".
 - **nick-fury** owns supply chain, secrets, image scanning, and headers at the edge, so it preloads `security-engineering`. The delivery templates live in `devops-engineering/assets/`, which it already preloads (the SKILL.md links an assets index; the files themselves load when read). Deviation: `observability-and-debugging` on demand, because it writes monitoring and alert config.
-- **doctor-strange** maps every flow and state and designs the best path, so it preloads `ui-ux-design` and `ui-isolation` (so its designs fit pure `ui/` widgets: one widget per state, values and callbacks only). Deviation: it also keeps `contract-first`, which `kit-extra-agents` A.1 already preloads, because it writes into the contract's UI Contract section. It loads `security-engineering` for permission prompts, privacy copy, and what a screen must never show.
-- **technical writer** documents commands and APIs, so it loads `api-contract` (API docs come from OpenAPI), `git-workflow` (CHANGELOG and PR text style), and `devops-engineering` (runbook template), all on demand. Nothing is used on every task, so nothing is preloaded.
-- **security auditor** does threat models and whole-system audits, so it preloads `security-engineering` and loads the data, API, and logging skills as the audit reaches them.
-- **performance and end-to-end QA** writes journeys and budgets, so it preloads `testing-strategy` and loads `observability-and-debugging` for profiling.
+- **vision** inspects an unfamiliar codebase and names the facts, constraints, and candidate invariants, so what it needs changes with every request and nothing earns a preload. It loads `contract-first` to put its findings in the shape iron-man's sections expect, the stack standard for the area it is reading, `database-drizzle` when the request touches data, `feature-recipes` when the ask is one of the recipes (so it reports the recipe's invariants rather than inventing them), and `api-contract` when the request names an endpoint. It writes nothing, so no skill it loads can become an edit.
+- **shuri** maps every flow and state and designs the best path, so it preloads `ui-ux-design` and `ui-isolation` (so its designs fit pure `ui/` widgets: one widget per state, values and callbacks only). Deviation: it also keeps `contract-first`, which `kit-extra-agents` A.1 already preloads, because it writes into the contract's UI Contract section. It loads `security-engineering` for permission prompts, privacy copy, and what a screen must never show.
+- **ant-man** touches Drizzle schema, migrations, indexes, and transactions on every task, which is exactly one skill's subject, so it preloads `database-drizzle`. That is the only agent for which the skill is the whole job rather than one part of it, and `kit-extra-agents` F.1 already has the line. It loads `security-engineering` for tenant scoping and the IDOR test behind `07-tenant-scoping.md`, `api-contract` when a schema change moves a field that is in the API, and `testing-strategy` for the concurrency and e2e tests a migration needs hawkeye to write.
+- **spider-man** hunts bugs nobody specified, and its attack lists are the boundary, concurrency, and fixture material in `testing-strategy`, so it preloads that one. It cannot write a test (`kit-extra-agents` Decision 7), so it uses the skill to describe a finding in the shape hawkeye will turn into a test. It loads `security-engineering` for abuse cases, `observability-and-debugging` to read a log or trace into a reproduction, and `api-contract` when a finding is a client and server disagreement.
+- **quicksilver** defends budgets with numbers, so it preloads `testing-strategy` for the flaky-measurement policy and the honesty rules, and loads `observability-and-debugging` for `05-profiling.md`. Deviation: `database-drizzle` on demand, for `02-indexes-and-queries.md`, because a missed API budget is usually a query, and quicksilver must name the contributor before handing it to ant-man.
+- **black-panther** does threat models, vulnerability assessment, and whole-system audits, so it preloads `security-engineering` and loads the data, API, and logging skills as the audit reaches them. Its assessment runs against code and configuration only (`kit-extra-agents` Decision 5), so nothing it loads describes running a tool at a live target.
+- **technical writer** documents commands and APIs, so it loads `api-contract` (API docs come from OpenAPI), `git-workflow` (CHANGELOG and PR text style), and `devops-engineering` (runbook template), all on demand. Nothing is used on every task, so nothing is preloaded. The role is struck permanently (`kit-extra-agents` OD-16, decided), so its row is never applied.
 
 ### Preload cost
 
@@ -102,8 +109,15 @@ Exact text thor applies. Frontmatter `skills:` lists, in this order. Body: one l
 | `hawkeye.md` | `testing-strategy` | Method step 1 gains: "Load `security-engineering` for abuse cases, `observability-and-debugging` when the input is a log or trace, and `api-contract` for contract tests." |
 | `black-widow.md` | `ui-isolation`, `security-engineering`, `testing-strategy` | Step 5 gains: "Check the `security-engineering` items for the stack and cite their ids." After the Load line: "Load `api-contract` when the diff changes an endpoint or DTO, `database-drizzle` when it changes schema or migrations, and `refactoring-playbook` for a refactor." |
 | `nick-fury.md` | `devops-engineering`, `security-engineering` | Method step 1 gains: "Templates are in `devops-engineering/assets/README.md`. Load `git-workflow` for branch and PR text, `observability-and-debugging` for monitoring." |
-| `doctor-strange.md` | `contract-first`, `ui-isolation`, `ui-ux-design` | Owned by `kit-extra-agents`. Add `ui-ux-design` only in Phase 3 (see Build order), and the line "Load `security-engineering` for permission prompts and anything a screen must not show." |
-| new writer, auditor, QA agents | as in the table | Owned by `kit-extra-agents`. Add their `skills:` and lines only after both the agent file and every named skill exist |
+| `shuri.md` | `contract-first`, `ui-isolation`, `ui-ux-design` | Owned by `kit-extra-agents` A.1. Add `ui-ux-design` only in Phase 3 (see Build order), and the line "Load `security-engineering` for permission prompts and anything a screen must not show." |
+| `vision.md` | (none) | Owned by `kit-extra-agents` E.1. Method step 2 gains: "Load `contract-first` to report in the shape the contract's sections need, the stack standard for what you are reading, `database-drizzle` when the request touches data, `feature-recipes` when the ask is one of its recipes, and `api-contract` when it names an endpoint." |
+| `ant-man.md` | `database-drizzle` | Owned by `kit-extra-agents` F.1, which already has the `skills:` line. Method step 1 gains: "Load `security-engineering` for tenant scoping, `api-contract` when a changed field is in the API, and `testing-strategy` for the tests a migration needs from hawkeye." |
+| `spider-man.md` | `testing-strategy` | Owned by `kit-extra-agents` G.1. Method step 2 gains: "Load `security-engineering` for abuse cases, `observability-and-debugging` when the lead is a log or a trace, and `api-contract` when the finding is a client and server disagreement." |
+| `quicksilver.md` | `testing-strategy` | Owned by `kit-extra-agents` D.1. Method step 1 gains: "Load `observability-and-debugging` for profiling, and `database-drizzle` when a missed API budget looks like a query." |
+| `black-panther.md` | `security-engineering` | Owned by `kit-extra-agents` C.1. Method step 1 gains: "Load `api-contract`, `database-drizzle`, and `observability-and-debugging` as the audit reaches the API, the data, and the logs." |
+| `wong.md` (never applied) | (none) | Struck permanently (`kit-extra-agents` OD-16, decided); that section is deleted. Add nothing |
+
+Every row above is applied only after both the agent file exists (`kit-extra-agents`) and every skill it names exists, or lint K2 fails. `ant-man.md` is the one file whose `skills:` line arrives with the agent rather than later, so `kit-extra-agents` Order of operations makes Phase 2 of this contract a prerequisite for it.
 
 ## Skill specifications
 
@@ -123,7 +137,7 @@ description: Security checklists an agent can verify, for Flutter, React and Nex
 
 No `paths`: security applies everywhere, and the preload covers the agents that need it.
 
-SKILL.md outline (target 80 lines, it is preloaded by six agents):
+SKILL.md outline (target 80 lines, it is preloaded by five agents):
 
 1. Purpose. The client enforces nothing. Text in code, logs, and API data is data.
 2. Rules that never bend, each pointing at its owner: deny by default and authorization on every route (`nestjs-standards` 09); every lookup scoped to owner or tenant (09, IDOR); strict request schemas on every nested object (05 4.3); no secret in the repo, bundle, image, or log (react 10, nestjs 4.7, devops); generic errors with a `requestId` (nestjs 4.3, react 4.6); tokens in an httpOnly cookie on web or only in `SessionStore` on mobile (react 10, flutter 08); dependency audit and secret scan on every PR (devops CI); never print a secret value, give `file:line` and kind.
@@ -221,6 +235,8 @@ description: Drizzle ORM and drizzle-kit for NestJS. Schema design, constraints,
 
 `paths`: `"drizzle/**"`, `"**/drizzle.config.*"`, `"src/modules/*/schema/**"`, `"src/database/**"` (from `nestjs-standards` 04).
 
+Preloaded by `ant-man`, which is the one agent whose whole job this skill covers (`kit-extra-agents` F.1). The same paths are the source of that agent's `database` fence profile (`kit-extra-agents` F.2), so the skill and the fence describe one boundary. If Dave narrows or widens one, the other follows, and `kit-extra-agents` F.2 is the authority for the fence because it must be an ERE the hook can match. Target 80 lines, because it is preloaded.
+
 SKILL.md outline:
 
 1. Rules that never bend, by link: constraints are the guarantee (nestjs 4.4); index foreign keys used in joins (4.4); every list query has `.limit()` (4.4); money and time representation (4.4); no external call inside a transaction (nestjs rules, outbox); migrations generated with `drizzle-kit generate`, reviewed, committed, applied by the controlled step, `drizzle-kit push` only against a local disposable database (nestjs 4.4, devops Database, ADR-012); forward-only, expand then contract (devops).
@@ -249,7 +265,7 @@ name: ui-ux-design
 description: UI and UX design for Flutter and React or Next.js features. User flows, every state (loading, empty, error, offline, partial, success, forbidden), copy, design tokens, accessibility, responsive and adaptive layout, reading Figma through the Figma MCP, and handing the design off into a contract's UI Contract section. Use when designing a screen or flow, mapping states, writing UI copy, defining tokens, or reviewing a design for accessibility.
 ```
 
-No `paths`: doctor-strange writes docs, not code.
+No `paths`: shuri writes docs, not code.
 
 SKILL.md outline (target 80 lines, preloaded):
 
@@ -265,12 +281,14 @@ References:
 | --- | --- | --- | --- |
 | `01-user-flows.md` | Entry, steps, exits, each step's callback, the unhappy branches | none | Nielsen Norman Group, "10 Usability Heuristics for User Interface Design" |
 | `02-state-matrix.md` | The seven states with examples per platform | `ui-isolation`, `flutter-standards` rule 19, `react-standards` 05 (four states) | none beyond the kit |
-| `03-copy.md` | Plain words, error copy that says what to do next, no internal detail, length limits, localisable strings | `flutter-standards` 09 (Strings), `feature-recipes` `i18n.md` | Material Design 3 writing guidance, Apple Human Interface Guidelines (writing) |
+| `03-copy.md` | Plain words, error copy that says what to do next, no internal detail, length limits, localisable strings | `flutter-standards` 09 (Strings), `feature-recipes` `i18n.md` | Material Design 3 writing guidance, Apple Human Interface Guidelines (writing). As built: Nielsen Norman Group and Apple HIG (writing), see the note below the table |
 | `04-tokens.md` | Color, spacing, radius, type, motion; how a new token is proposed | `flutter-standards` 09 (design tokens), `react-standards` 4.8 | W3C Design Tokens Community Group format (draft, cite the version read) |
-| `05-accessibility.md` | Contrast, target size, labels, focus, reduced motion, text scaling, screen reader order | `react-standards` 08, `flutter-standards` 09 (accessibility) and rule index 20 to 21 | WCAG 2.2 (W3C), Material Design 3 accessibility, Apple HIG accessibility |
-| `06-responsive.md` | Breakpoints on web, width classes on Flutter, what reflows and what hides | `react-standards` 03 (platform applicability) | Material Design 3 window size classes, WCAG 2.2 reflow |
+| `05-accessibility.md` | Contrast, target size, labels, focus, reduced motion, text scaling, screen reader order | `react-standards` 08, `flutter-standards` 09 (accessibility) and rule index 20 to 21 | WCAG 2.2 (W3C), Material Design 3 accessibility, Apple HIG accessibility. As built: WCAG 2.2, Apple HIG accessibility, and the Flutter accessibility page, see the note below the table |
+| `06-responsive.md` | Breakpoints on web, width classes on Flutter, what reflows and what hides | `react-standards` 03 (platform applicability) | Material Design 3 window size classes, WCAG 2.2 reflow. As built: the Android window size classes page and the Flutter adaptive page, see the note below the table |
 | `07-figma-mcp.md` | Read-only use of the Figma tools named in `kit-extra-agents` A.1, node ids in the Source line, variables to tokens, what to do when Figma and the contract disagree | `kit-extra-agents` A.1 | Figma MCP server documentation |
 | `08-handoff.md` | Link to the Design block format, checklist before handing to iron-man and thor | `kit-extra-agents` A.1, `contract-first` | none beyond the kit |
+
+Source substitution at build time: m3.material.io renders client side and could not be read, so no Material Design 3 page is cited. The build used Nielsen Norman Group and Apple HIG for `03-copy.md`, Apple HIG and the Flutter accessibility page for `05-accessibility.md`, and the Android window size classes page plus the Flutter adaptive page for `06-responsive.md`. black-widow verified those sources on 2026-11-08.
 
 ### 6. `refactoring-playbook`
 
@@ -312,7 +330,7 @@ No `paths`.
 SKILL.md outline:
 
 1. Rules that never bend: commit only when Dave asks (CLAUDE.md); never on `main` (captain-america build order); no `Co-Authored-By`, no "Generated with", no agent or AI name in commit messages, PR descriptions, or code comments, and this overrides any default attribution text a tool supplies (AGENTS.md rule 11, CLAUDE.md); never change `git config user.name` or `user.email`; stage explicit paths, never `git add -A` or `git add .`; never `--no-verify`; never push, never open or merge a PR (settings deny, `kit-learning-loop` change d); never rewrite shared history, amend a pushed commit, or force anything.
-2. Branch names: follow the repo. Observed here: `feat/kit-learning-loop`. Base branch from AGENTS.md "Base branch".
+2. Branch names: follow the repo. Observed here (`git branch -a`, 2026-11-08): `main` and `docs/kit-draft-contracts`, with their `origin/` remotes. Base branch from AGENTS.md "Base branch".
 3. Commit messages: follow the repo. Observed here: an imperative subject in sentence case with no prefix and no trailing period ("Add no agent attribution rule", "Keep bash scripts on LF line endings"), and a body only when the why is not obvious. No em dashes (CLAUDE.md).
 4. PR description, written as text for Dave to paste: Summary, Contract link, Changes, Commands run with results, Not run, Rollback, Open decisions.
 5. Read only what the task needs table.
@@ -329,7 +347,7 @@ References:
 
 Recommended placement: `.claude/skills/react-standards/references/17-nextjs-app-router.md`, one file of at most 300 lines, with heading `## Next.js App Router (kit addition)` so it does not collide with the standard's section numbers. Alternative placement and its trade-off is OD-2.
 
-`react-standards/SKILL.md` changes: one table row `| Next.js App Router: server components, caching, route handlers, server actions, middleware, cookie auth to NestJS | 17-nextjs-app-router.md |`, and `paths` gains `"**/middleware.ts"`, `"**/app/**/route.ts"`, `"**/next.config.*"`.
+`react-standards/SKILL.md` changes: one table row `| Next.js App Router: server components, caching, route handlers, server actions, middleware, cookie auth to NestJS | 17-nextjs-app-router.md |`, and `paths` gains `"**/middleware.ts"`, `"**/proxy.ts"`, `"**/app/**/route.ts"`, `"**/next.config.*"`. `proxy.ts` is listed because Next.js v16 renames `middleware.ts` to `proxy.ts` (`17-nextjs-app-router.md` lines 11 and 58), so a v16 project would otherwise not trigger the skill.
 
 Sections of the reference:
 
@@ -384,11 +402,11 @@ New files:
 | File | What it is |
 | --- | --- |
 | `assets/README.md` | Index of every asset: what it is, where it is copied to, what to replace. SKILL.md's Assets section becomes one line linking it, so the SKILL.md stays under the cap |
-| `assets/ci-flutter.yml` | PR checks: format, `dart analyze --fatal-infos`, `dart run tool/check_architecture.dart`, `flutter test`, matching `flutter-standards` 16 11.2 |
-| `assets/ci-web.yml` | PR checks for React or Next.js: `npm ci`, typecheck, lint, boundaries, test, build, matching `react-standards` 11.9 |
-| `assets/ci-nestjs.yml` | PR checks: `npm ci`, typecheck, lint, unit tests, e2e against a service-container database, OpenAPI staleness check, `docker build` of runtime and `migrate` targets |
+| `assets/ci-flutter.yml` | PR checks: format, `dart analyze --fatal-infos`, `dart run tool/check_architecture.dart`, `flutter test`, matching `flutter-standards` 16 11.2, and Gradle wrapper jar validation (`gradle/actions/wrapper-validation`, `min-wrapper-count: 0`) (OD-14) |
+| `assets/ci-web.yml` | PR checks for React or Next.js: `npm ci`, typecheck, lint, boundaries, test, build, matching `react-standards` 11.9, and an optional runtime image build and Trivy scan for self-hosted Next.js (OD-16) |
+| `assets/ci-nestjs.yml` | PR checks: `npm ci`, typecheck, lint, unit tests, e2e against a service-container database, OpenAPI staleness check, `docker build` of runtime and `migrate` targets, and a Trivy image scan of the runtime and `migrate` images (OD-16) |
 | `assets/ci-security.yml` | Dependency audit and secret scan jobs. Tools are OD-7. |
-| `assets/dependabot.yml` | Updates for actions and the package ecosystems, which the devops CI rule already relies on |
+| `assets/dependabot.yml` | Updates for actions and the package ecosystems, which the devops CI rule already relies on, with a 7-day cooldown on version updates (OD-15) |
 | `assets/Dockerfile.nextjs` | Multi-stage, standalone output, non-root, no dev dependencies, mirroring `Dockerfile.nestjs` |
 | `assets/release-mobile.yml` | Store upload workflow behind a protected environment that needs Dave's approval, internal track or TestFlight first (devops Artifacts rule) |
 | `assets/fastlane/Fastfile`, `assets/fastlane/Appfile` | Lanes for internal upload only. Signing material from secrets by name, never in the repo |
@@ -396,7 +414,7 @@ New files:
 Rules every template holds:
 
 - Header comment: `Template. Copy it, replace every PIN and <placeholder>, then run actionlint.`
-- Every `uses:` is pinned to a 40-character SHA with the version in a comment. The one SHA the kit already has is reused (`actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0`). Any other action uses `0000000000000000000000000000000000000000 # PIN <owner>/<action> <version>`, which cannot resolve, so an unreplaced template fails closed instead of running an unpinned action. No agent invents a SHA.
+- Every `uses:` is pinned to a 40-character SHA with the version in a comment. The one verified SHA the kit has is reused (`actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`, Dave, 2026-11-08). It replaced v4.4.0 because v4.4.0 runs on node20, which GitHub removed from hosted runners on 2026-09-23; v7.0.1 runs on node24 (nick-fury verified it with `git ls-remote` and the tag's `action.yml` on 2026-11-08). Any other action uses `0000000000000000000000000000000000000000 # PIN <owner>/<action> <version>`, which cannot resolve, so an unreplaced template fails closed instead of running an unpinned action. No agent invents a SHA.
 - `permissions: contents: read` at the top, more per job only where needed.
 - No `github.*` user-controlled value interpolated into `run:`.
 - Agents write and validate these (`actionlint`, `hadolint`, `docker build`); they never run Fastlane or a release workflow.
@@ -452,6 +470,7 @@ References:
 6. **`flutter-standards/references/02-quick-start.md`** line 44: the en dash in `patterns 1`, en dash, `3` becomes `patterns 1 to 3`, so the lint passes on day one. One character in Dave's standard; listed so he sees it.
 7. **Agent files**: the edits in "Agent file edits".
 8. **`README.md`**: "six skills" becomes the new count (fifteen if every phase lands), plus a Skills table (skill, purpose, preloaded by). **`docs/team.md`**: a "Skills" line per agent, matching the assignment table. **`CHANGELOG.md`**: one line per phase, for example `- Added the security-engineering, api-contract, and testing-strategy skills.`
+9. **`flutter-standards/references/16-production-and-release.md`** 11.2 CI example: `actions/checkout` is pinned to `3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1` with `persist-credentials: false`, and every other action, `reactivecircus/android-emulator-runner` included, uses the zero-SHA `# PIN` placeholder (its version is left as `<version>` for Dave to pick). The comment that said tags are shown for readability now says each PIN placeholder is replaced before use, citing `devops-engineering` `assets/README.md`, and a sentence points to `devops-engineering/assets/ci-flutter.yml` and `release-mobile.yml` as the maintained templates. Reason: the example contradicted SEC-SUP-08 and the kit pin rule in Rules every template holds. An example correction, not a rule change, so it is a patch entry (2.2.1-rc.1) in the changelog of `flutter-standards` 12.5 (`17-governance.md`).
 
 ## Size limits
 
@@ -473,6 +492,7 @@ The 1024 and 64 limits come from the Agent Skills format Claude Code reads. blac
 - Category names and numbering (for example API1 to API10) are copied from the edition cited. A checklist id (`SEC-API-01`) is the kit's own and is stable across editions.
 - No invented statistics, CVE numbers, or default values. A default that depends on a framework version names the version.
 - black-widow verifies provenance in each phase review: it opens each cited source that is reachable, checks the claim against it, and labels each check `verified` or `theoretical` as it does for security findings. Unreachable sources are listed in its report.
+- A citation of a kit standard uses the heading number, never the file number. A dotted number (4.3, 11.6) is written as in the heading. An undotted number is written "section N", with the file name on its first mention in each file, as `nestjs-standards` section 11 (`12-api-behavior-and-external-dependencies.md`) or a link with that text. A heading with no number is cited by name and file, as `flutter-standards` "Stack" (`04-stack.md`). Reason: file numbers run one above section numbers in `react-standards` and `nestjs-standards`, and five above from `05` on in `flutter-standards`, so a bare number points at two places. Enforced by review (black-widow, Provenance). Adopted by Dave on 2026-11-08 for `api-contract` and quicksilver; applying it to the other skills and to this contract's own text is an open decision for Dave (OD-20, unresolved).
 
 ## Invariants
 
@@ -528,14 +548,16 @@ Overlap with `kit-extra-agents`: that contract's `scripts/tests/agent-files.sh` 
 
 Each phase ends with: lint clean, black-widow PASS (including provenance), Dave commits. A phase starts only after Dave picks it (OD-1).
 
+Status (2026-11-08): Phases 0 to 4 are built. Dave chose to complete Phases 3 and 4 (OD-1, decided).
+
 | Phase | Contents | Depends on |
 | --- | --- | --- |
 | 0 | `scripts/check-skills.sh`; hawkeye's lint tests; the en dash fix; contract template Security section and `contract-first` item 7 | This contract approved |
 | 1 | `security-engineering`, `api-contract`, `testing-strategy`; their `skills:` lines and body lines in iron-man, thor, hawkeye, black-widow, nick-fury; `SEC-API-01` exists for the template example | Phase 0 |
 | 2 | `database-drizzle`, `refactoring-playbook`, `git-workflow`, `observability-and-debugging`; hulk's `skills:` line and the remaining on-demand body lines | Phase 1 |
-| 3 | `ui-ux-design`; `react-standards` `17-nextjs-app-router.md`; delivery assets and `assets/README.md` | Phase 1; `ui-ux-design` also needs `kit-extra-agents` section A approved and `doctor-strange.md` created |
+| 3 | `ui-ux-design`; `react-standards` `17-nextjs-app-router.md`; delivery assets and `assets/README.md` | Phase 1; `ui-ux-design` also needs `kit-extra-agents` section A approved and `shuri.md` created |
 | 4 | `feature-recipes`, the recipes Dave picks | Phase 2 (links `database-drizzle`, `observability-and-debugging`) |
-| per new agent | `skills:` lines for doctor-strange, writer, auditor, QA | The agent file exists (`kit-extra-agents`) and every skill it names exists, else lint K2 fails |
+| per new agent | `skills:` lines and body lines for vision, shuri, ant-man, spider-man, quicksilver, black-panther (never the writer, struck permanently (`kit-extra-agents` OD-16, decided)) | The agent file exists (`kit-extra-agents`) and every skill it names exists, else lint K2 fails. `ant-man` is the reverse dependency: its file ships with `skills: database-drizzle`, so Phase 2 of this contract comes first |
 
 Why security first: it is preloaded by the most agents, the contract template's new Security section points at it, and every later skill links its ids. `api-contract` and `testing-strategy` come with it because every contract has an API and a Tests section.
 
@@ -576,7 +598,9 @@ Why security first: it is preloaded by the most agents, the contract template's 
 | A cited source cannot be opened or contradicts the text | black-widow BLOCK, listing the item | thor removes or corrects the claim |
 | A new skill contradicts a kit standard | black-widow BLOCK | The standard wins. If the standard is wrong, iron-man drafts a proposal against the standard |
 | `kit-extra-agents` section A is struck or not approved | Phase 3 builds without `ui-ux-design`'s agent line | `ui-ux-design` waits, or ships unassigned if Dave says so |
-| The new agents keep other names than the suggestions | Assignment rows apply to the chosen names | thor substitutes the names from `kit-extra-agents` |
+| `kit-extra-agents` section F ships before this contract's Phase 2 | `ant-man.md` names `database-drizzle`, which does not exist yet, so lint `FAIL: K2` | Land Phase 2 first, or create `ant-man.md` with no `skills:` line and add it in Phase 2 |
+| The writer is struck permanently (`kit-extra-agents` OD-16, decided) | The writer's Assignment row and `wong.md` edit are never applied | Nothing to build. The row stays in the table marked never applied |
+| A role in `kit-extra-agents` is renamed or re-scoped again | Assignment rows and body lines name the old role | This contract's Assignment table and Agent file edits are the two places to change; the skills themselves name no agent except `ui-ux-design`'s links to `kit-extra-agents` A.1 |
 | Preload cost proves too high in practice | Dave sees slow or truncated agent starts | Move the skill to on demand (OD-5); no file content changes |
 | An agent forgets to load an on-demand skill | Not machine-detected | black-widow flags missing checks in review; the body line names the trigger |
 | A project edits a new reference and adds a source URL, then syncs | `kit-learning-loop` leak scan `LEAK url ...` | Change G5 seeds the allowlist with source hosts |
@@ -609,7 +633,7 @@ Apply after Phase 0 lands and the lint is clean on `main`, or every open PR fail
 
 ### G3. `contract-gate.sh`: protect the lint once built
 
-Today (line 26):
+Today (line 30):
 
 ```bash
 if [[ "$rel" =~ ^(\.claude/(hooks/|settings\.json$)|scripts/check-contracts\.sh$|\.github/workflows/agent-gates\.yml$) ]]; then
@@ -679,24 +703,47 @@ Per phase, black-widow also runs `bash scripts/check-skills.sh` and reports its 
 ## Problems walked past
 
 1. One en dash in `flutter-standards/references/02-quick-start.md` line 44. Fixed in Phase 0 (Updates item 6), because the lint would fail without it.
-2. `kit-extra-agents.md` still names the UI/UX agent `jarvis` at the time of reading. Dave decided `doctor-strange`. That contract owns the rename; this one assumes it.
+2. `kit-extra-agents.md` has been renamed twice now: `jarvis`, then `doctor-strange`, now `shuri`, and its security and performance roles changed name or scope with it. That contract owns the roster; this one carries the names in two places only (the Assignment table and Agent file edits), which is why the skills themselves name no agent. The one exception is `ui-ux-design`, whose `07-figma-mcp.md` and `08-handoff.md` link `kit-extra-agents` A.1 for the Design block format; section A kept its letter through the rename, so those links still resolve.
 3. This session's harness supplied default commit attribution guidance that conflicts with AGENTS.md rule 11. CLAUDE.md wins in words. G4 is the option to remove it at the source.
 4. `README.md` says "six skills" and lists none of them by name, so it goes stale with each phase. Updates item 8 handles it.
 5. `devops-engineering/SKILL.md` is at 91 lines, so its Assets list cannot grow. Updates item 3 moves it to `assets/README.md`.
 6. Before `kit-learning-loop` b3, nothing machine-checks that a skill or agent edit was approved. That is the gap b3 closes; this contract relies on process until then.
+7. `kit-extra-agents.md` D.1 (about line 347) still cites "`react-standards` section 9" (Security) for quicksilver, and line 124 or near it cites "`react-standards` section 8" for shuri accessibility. Line 251 (C.1) cites "`nestjs-standards` section 9" and "`react-standards` section 10" for black-panther's security load; the headings are `nestjs-standards` section 8 (`09-security-baseline.md`) and `react-standards` section 9 (`10-security.md`). Under the Provenance citation convention those numbers point at the wrong place. The agent files are corrected; that contract is not, because editing it reopens it. Dave decides.
+8. `.github/workflows/agent-gates.yml` line 14 still pins `actions/checkout` v4.4.0, which runs on node20, removed from hosted runners on 2026-09-23. It is a gate that only Dave edits, so this contract does not change it. Moving it to the v7.0.1 SHA named in Repo facts is Dave's edit, alongside G2.
+9. `git-workflow/SKILL.md` line 24 names `feat/kit-learning-loop` as an observed branch ("named in `kit-skills`"). `git branch -a` on 2026-11-08 shows no such branch, only `main` and `docs/kit-draft-contracts` and their remotes. Section 7 here is corrected; the skill file is not edited by this fix.
+10. `ant-man.md` line 30 forbids any command that connects to a database, "not even against a local or disposable database". `database-drizzle/SKILL.md` line 27, which ant-man preloads, lets an agent run the NestJS e2e suite on a database created and thrown away for that run, citing "Dave's decision of 2026-11-08". No contract records that decision. Needs Dave (Open decisions).
+11. `black-widow.md` line 33 (step 9) requires every migration to be "generated, not hand-written". `ant-man.md` line 32 and `database-drizzle/SKILL.md` line 28 let an agent write the body of a migration created with `drizzle-kit generate --custom`. Needs Dave (Open decisions).
+12. `database-drizzle/references/07-tenant-scoping.md` lines 3 and 84 call OD-10 "decided by Dave", but OD-10 in this contract is unresolved.
+13. `testing-strategy/references/09-exploratory-testing.md` exists and is routed from `testing-strategy/SKILL.md` line 77, but OD-13 is unresolved and section 3's reference table does not list the file.
+14. `flutter-standards/references/00-overview.md` lines 13 and 28 state version `2.2.0-rc.1`, while `17-governance.md` line 127 adds a `2.2.1-rc.1` changelog entry (Updates item 9).
+15. hawkeye's `tests` fence (`path-fence.sh` line 10) does not match a root `playwright.config.ts`, though `hawkeye.md` line 39 and `kit-extra-agents` OD-13 say hawkeye owns `playwright.config.*`.
+16. OD-7 here says its outcome also settles `kit-extra-agents` OD-10, but that OD-10 is decided the other way: no osv-scanner and no gitleaks for black-panther. They may be different scopes (the CI template here, agent tooling there). Needs Dave (Open decisions).
 
 ## Open decisions
 
-All unresolved. Do not build the affected phase until Dave answers.
+OD-1, OD-2, OD-3, OD-7, OD-8, OD-14, OD-15, and OD-16 are decided by Dave (2026-11-08); the rest are unresolved. Do not build a phase that depends on an unresolved decision until Dave answers.
 
-- **OD-1 (unresolved)**: Which phases to build now. Recommended: 0 and 1 now, then 2. Phase 3 waits for `kit-extra-agents` section A.
-- **OD-2 (unresolved)**: Next.js placement. Recommended: `react-standards/references/17-nextjs-app-router.md` (Decision 3). Alternative: a separate `nextjs` skill with its own `paths`, which is cheaper to load alone but duplicates 4.2 and 04 and triggers on the same files as `react-standards`. A second alternative is a project-level reference instead of a kit one.
-- **OD-3 (unresolved)**: `feature-recipes` scope. All eight recipes now, or only those a current project needs (each recipe costs a reference file and a provenance review). Also: does `payments.md` stay provider-neutral, or does Dave name a provider for the kit?
+- **OD-1 (decided, Dave, 2026-11-08)**: Which phases to build now. Recommended: 0 and 1 now, then 2. Phase 3 waits for `kit-extra-agents` section A. Outcome: Phases 0 to 4 are built. Dave chose to complete Phases 3 and 4 ("continue the other unfinished phases", 2026-11-08). Dave confirms this on re-approval of this contract.
+- **OD-2 (decided, Dave, 2026-11-08)**: Next.js placement. Recommended: `react-standards/references/17-nextjs-app-router.md` (Decision 3). Alternative: a separate `nextjs` skill with its own `paths`, which is cheaper to load alone but duplicates 4.2 and 04 and triggers on the same files as `react-standards`. A second alternative is a project-level reference instead of a kit one. Outcome: Next.js stays at `react-standards/references/17-nextjs-app-router.md`.
+- **OD-3 (decided, Dave, 2026-11-08)**: `feature-recipes` scope. All eight recipes now, or only those a current project needs (each recipe costs a reference file and a provenance review). Also: does `payments.md` stay provider-neutral, or does Dave name a provider for the kit? Outcome: all eight recipes, and `payments.md` stays provider-neutral.
 - **OD-4 (unresolved)**: Per-stack split for `security-engineering`. Recommended: three stack files (web, API, mobile) plus four shared ones. Alternatives: one file per OWASP list, or a split of web into React and Next.js.
 - **OD-5 (unresolved)**: Preload versus on demand. Recommended: as in the Assignment table (black-widow at about 3,000 to 4,000 tokens of preload). Alternative: preload only `security-engineering` everywhere it is listed, and load `api-contract` and `testing-strategy` on demand, trading cost for the risk that an agent does not load them.
 - **OD-6 (unresolved)**: Generated Dart client from OpenAPI for Flutter. Recommended: no, keep `retrofit` with hand-written DTOs and a contract test (Decision 4). Yes would need a change to `flutter-standards` 04 and an ADR.
-- **OD-7 (unresolved)**: Tools in `ci-security.yml`. Dependency audit: `npm audit` for Node, and for Dart either `osv-scanner` or none (Dart has no built-in audit). Secret scan: `gitleaks`, GitHub secret scanning with push protection, or both. `kit-extra-agents` OD-10 also leaves `osv-scanner` and `gitleaks` open; decide both together.
-- **OD-8 (unresolved)**: Who writes delivery templates under `.claude/skills/devops-engineering/assets/`: thor (default, no gate change), or nick-fury, which needs its `devops` fence widened to that folder (a gate edit).
+- **OD-7 (decided, Dave, 2026-11-08)**: Tools in `ci-security.yml`. Dependency audit: `npm audit` for Node, and for Dart either `osv-scanner` or none (Dart has no built-in audit). Secret scan: `gitleaks`, GitHub secret scanning with push protection, or both. `kit-extra-agents` OD-10 also leaves `osv-scanner` and `gitleaks` open; decide both together. Outcome: `npm audit` for Node, `osv-scanner` for Dart, and `gitleaks` for the secret scan, with GitHub secret scanning push protection as a complement. This also settles `kit-extra-agents` OD-10; that contract is not edited here and records it on its own revision.
+- **OD-8 (decided, Dave, 2026-11-08)**: Who writes delivery templates under `.claude/skills/devops-engineering/assets/`: thor (default, no gate change), or nick-fury, which needs its `devops` fence widened to that folder (a gate edit). Outcome: thor writes them; no gate change.
 - **OD-9 (unresolved)**: One kit check script or two. Keep `scripts/check-skills.sh` separate from `kit-extra-agents`' `scripts/tests/agent-files.sh`, or merge K2 and K4 into one script.
 - **OD-10 (unresolved)**: Does row-level security become a kit default in `database-drizzle` `07-tenant-scoping.md`, or stay an option per project? Recommended: an option.
-- **OD-11 (unresolved)**: Does doctor-strange keep `contract-first` preloaded (this contract and `kit-extra-agents` A.1 say yes), given Dave's proposed list had only `ui-ux-design` and `ui-isolation`?
+- **OD-11 (unresolved)**: Does shuri keep `contract-first` preloaded (this contract and `kit-extra-agents` A.1 say yes), given Dave's proposed list had only `ui-ux-design` and `ui-isolation`?
+- **OD-12 (unresolved)**: Do `vision` and `ant-man` need a skill of their own, beyond what the eleven specified here already cover? `ant-man`'s work is `database-drizzle` end to end, so the answer there looks like no. `vision` is the open one: its job is codebase inspection and task breakdown, and nothing here teaches how to inspect an unfamiliar repo (where to look first per stack, how to tell an established pattern from a one-off, how to size an ask, how to write a fact with a location). That could be a `codebase-analysis` skill, or it could stay inside `vision`'s body, which already carries the method. Recommended: start with the body, and only add a skill if two agents need the same method. Writing the full spec is a follow-up, not part of this contract, and no new skill folder is created until Dave answers. Evidence that would close it, pending verification: `.claude/agents/vision.md` body carries the inspection method stated above.
+- **OD-13 (unresolved)**: Does `spider-man` share `testing-strategy` with hawkeye as written, or does its exploratory material (boundary-value lists, race windows, out-of-order flows, state-combination enumeration) earn its own reference in that skill, for example `09-exploratory-testing.md`? Recommended: one new reference inside `testing-strategy` rather than a new skill, because hawkeye benefits from the same lists when turning a finding into a test. That reference is not specified here; it would be added to section 3's reference table when Dave answers. Evidence that would close it, pending verification: `.claude/skills/testing-strategy/references/09-exploratory-testing.md` exists and is routed from `testing-strategy/SKILL.md`.
+- **OD-14 (decided, Dave, 2026-11-08)**: Gradle wrapper validation (nick-fury finding F10). Outcome: `gradle/actions/wrapper-validation` runs in the `ci-flutter.yml` verify job, and `release-mobile.yml` inherits it through `workflow_call`, so it is not duplicated; no template uses `gradle/actions/setup-gradle`, so no second validation runs. `min-wrapper-count: 0`, because Flutter's `android/.gitignore` excludes the wrapper jar and `flutter_tools` injects it, so a repo with no committed jar passes while a committed jar is still validated. `assets/README.md` carries guidance on `distributionSha256Sum` in `gradle-wrapper.properties`. The action uses the PIN placeholder per Rules every template holds.
+- **OD-15 (decided, Dave, 2026-11-08)**: Dependabot cooldown (nick-fury finding F15). Outcome: `cooldown` with `default-days: 7` on every ecosystem in `assets/dependabot.yml`. GitHub documents that cooldown applies only to version updates, never to security updates, so a security fix is not delayed.
+- **OD-16 (decided, Dave, 2026-11-08)**: Image scanning (nick-fury finding F16). Outcome: `aquasecurity/trivy-action` v0.36.0, as a zero-SHA PIN, with the Trivy binary pinned through `version: v0.76.2`, scans built images: the runtime and `migrate` images in `ci-nestjs.yml`, and the optional runtime image in `ci-web.yml` for self-hosted Next.js. Two passes: a report-only pass at MEDIUM and above, and a gate that fails on HIGH or CRITICAL with a fix available (`ignore-unfixed`). Exceptions go in `.trivyignore`, each with an expiry. No SARIF upload. Context: the `trivy-action` tags were hijacked on 2026-03-19 (GHSA-69fq-xp46-6x23). The SHA that replaces the PIN keeps a moved tag from changing the action that runs, and the pinned binary version keeps the action from fetching a Trivy release nobody chose.
+- OD-14 and OD-16 are the stated requirement under AGENTS.md rule 6 for the two new actions (`gradle/actions/wrapper-validation`, `aquasecurity/trivy-action`) and the Trivy binary. OD-15 adds no dependency.
+- **OD-17 (unresolved, raised by nick-fury)**: A scheduled rescan of the shipped image, so a vulnerability published after release is found. It needs a registry and a deployment target, which the kit does not name. Until Dave answers, only the pull request scan in OD-16 runs.
+- **OD-18 (unresolved, raised by nick-fury)**: Whether Trivy's secret scanner runs on built images, and whether its findings report or gate. OD-16 decides only the vulnerability scan; `gitleaks` (OD-7) scans the repository, not the image.
+- **OD-19 (unresolved, raised by nick-fury)**: Which Trivy binary version: v0.76.2, as OD-16 records, which was 3 days old at decision time, or v0.76.1.
+- **OD-20 (unresolved)**: Whether the Provenance citation convention applies to the other skills and to this contract's own text, which still writes bare numbers such as `nestjs-standards` 07 and `flutter-standards` 16 11.2. Dave adopted it for `api-contract` and quicksilver on 2026-11-08.
+- **Needs Dave (unresolved, Problems walked past 10)**: Whether agents may run the NestJS e2e suite on a throwaway database (`database-drizzle` SKILL.md line 27) or never connect to any database (`ant-man.md` line 30); no contract records the 2026-11-08 decision the skill cites.
+- **Needs Dave (unresolved, Problems walked past 11)**: Whether a `drizzle-kit generate --custom` body written by an agent passes black-widow step 9 ("generated, not hand-written").
+- **Needs Dave (unresolved, Problems walked past 16)**: Whether OD-7 (CI template tools) and `kit-extra-agents` OD-10 (no scanners for black-panther) are separate scopes, or OD-7's "also settles" sentence is wrong.

@@ -41,7 +41,7 @@ sections. Read these first, and reach for the rest when the problem arrives.
 | Building a feature | §5 Feature anatomy, §10 Checklist | the core loop |
 | Deciding where a file goes | §2 Folder structure | one page |
 | Handling a failure | §3 `Result`, `AppException`, `DataState`, §4 `errorToMessage` | one page |
-| Writing a notifier | §5 patterns 1–3, §6 `watch`/`read`/`listen` | one page |
+| Writing a notifier | §5 patterns 1 to 3, §6 `watch`/`read`/`listen` | one page |
 | Building a screen | §4 Accessibility and Design tokens, §5 four states | one page |
 | Writing tests | §7.8 widget tests, §7.10 what to test | one page |
 

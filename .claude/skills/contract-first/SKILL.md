@@ -31,6 +31,7 @@ Check each one, and list any gap under Open Decisions:
 4. Database constraints are named.
 5. Authorization and ownership are stated for every operation.
 6. Each goal has a test that would prove it.
+7. Every trust boundary has its threats and abuse cases in Security, each with a control and a test.
 
 ## Gate behavior
 

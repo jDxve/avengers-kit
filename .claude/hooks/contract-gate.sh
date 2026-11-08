@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Blocks code for a new feature until its contract is approved, and keeps approval human-only.
 set -uo pipefail
+shopt -s nocasematch
 
 block() { echo "$1" >&2; exit 2; }
 command -v jq >/dev/null || block "contract-gate: jq is required. Install it, then retry."
@@ -19,6 +20,9 @@ norm() {
 root="$(norm "${CLAUDE_PROJECT_DIR:-$(jq -r '.cwd // "."' <<<"$input")}")"
 file="$(norm "$file")"
 rel="${file#"$root"/}"
+if [[ "$(tr 'A-Z' 'a-z' <<<"$file")" == "$(tr 'A-Z' 'a-z' <<<"$root")/"* ]]; then rel="${file:${#root}+1}"; fi
+rel="$(sed -E 's#/+#/#g' <<<"$rel")"
+[[ "/$rel/" == */../* || "/$rel/" == */./* ]] && block "Use a path without . or .. segments: $rel"
 
 status_of() { sed -n 's/^status:[[:space:]]*\([a-z]*\).*/\1/p' "$1" | head -n 1; }
 
@@ -28,18 +32,25 @@ if [[ "$rel" =~ ^(\.claude/(hooks/|settings\.json$)|scripts/check-contracts\.sh$
 fi
 
 # Contracts: only a person approves one, and an approved one reopens before it changes.
+# Checks the status the file would actually have after the edit, not just new_string in isolation.
 if [[ "$rel" =~ ^docs/contracts/[^/]+\.md$ ]]; then
+  status_in() { sed -n 's/^status:[[:space:]]*\([a-z]*\).*/\1/p' <<<"$1" | head -n 1; }
+  cur=""; [ -f "$root/$rel" ] && cur="$(cat "$root/$rel")"
   if [ "$tool" = "Write" ]; then
     new="$(jq -r '.tool_input.content // empty' <<<"$input")"
   else
-    new="$(jq -r '.tool_input.new_string // empty' <<<"$input")"
+    old="$(jq -r '.tool_input.old_string // empty' <<<"$input")"
+    rep="$(jq -r '.tool_input.new_string // empty' <<<"$input")"
+    if [ "$(jq -r '.tool_input.replace_all // false' <<<"$input")" = "true" ]; then
+      new=${cur//"$old"/"$rep"}
+    else
+      new=${cur/"$old"/"$rep"}
+    fi
   fi
-  if grep -Eq '^status:[[:space:]]*approved' <<<"$new"; then
+  if [ "$(status_in "$new")" = "approved" ]; then
+    [ "$(status_in "$cur")" = "approved" ] \
+      && block "$rel is approved. Set status: draft in this same edit, then report what changed."
     block "Only Dave approves a contract. Leave it as status: draft and ask him to review it."
-  fi
-  if [ -f "$root/$rel" ] && [ "$(status_of "$root/$rel")" = "approved" ] \
-    && ! grep -Eq '^status:[[:space:]]*draft' <<<"$new"; then
-    block "$rel is approved. Set status: draft in this same edit, then report what changed."
   fi
   exit 0
 fi

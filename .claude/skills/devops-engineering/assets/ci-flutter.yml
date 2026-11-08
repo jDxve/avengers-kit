@@ -1,0 +1,60 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to .github/workflows/ci-flutter.yml. PR checks for a Flutter app, matching the verify job in
+# flutter-standards references/16-production-and-release.md 11.2, plus Gradle wrapper jar validation.
+# Dependency audit and secret scan are in ci-security.yml. release-mobile.yml calls this file
+# through workflow_call.
+# Steps from 11.2 that need the project's own tools (generated code check, lint fixture, release
+# config, coverage floors, sabotage, feature template, emulator and simulator flows) are added when
+# the project has those tools; see 11.2 for each one.
+name: ci-flutter
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-flutter-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  FLUTTER_VERSION: '<pinned Flutter version>' # bumped deliberately, in its own PR
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Fails on any committed gradle-wrapper.jar, or a homoglyph-named copy, that is not an official
+      # Gradle release. min-wrapper-count 0: Flutter's android/.gitignore excludes the jar and
+      # flutter_tools injects it from the SDK cache, so a default project has none to check.
+      # release-mobile.yml runs this job on the tagged commit before the signing jobs.
+      - name: Gradle wrapper jars are official
+        uses: gradle/actions/wrapper-validation@0000000000000000000000000000000000000000 # PIN gradle/actions v6.4.1
+        with:
+          min-wrapper-count: 0
+      - uses: subosito/flutter-action@0000000000000000000000000000000000000000 # PIN subosito/flutter-action v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter --version
+      - name: Dependencies from the lockfile
+        run: flutter pub get --enforce-lockfile
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+      # dart analyze at the package root, with no path argument, so analyzer plugins run (11.2).
+      - name: Analyzer, boundary lints, riverpod_lint
+        run: dart analyze --fatal-infos
+      - name: Feature cycles and justified suppressions
+        run: dart run tool/check_architecture.dart
+      - name: Tests
+        run: flutter test

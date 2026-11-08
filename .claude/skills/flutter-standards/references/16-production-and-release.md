@@ -112,6 +112,7 @@ void main(List<String> configFiles) {
 The lints and tests only mean something if a machine runs them on every PR, and if the PR
 cannot merge when they fail. Configure branch protection on `main` to require the `verify`,
 `security`, `android`, and `ios` jobs. A PR must not pass merely because the code compiles.
+The maintained templates are `devops-engineering/assets/ci-flutter.yml` and `devops-engineering/assets/release-mobile.yml`; copy from those, and treat this example as an illustration.
 
 ```yaml
 # .github/workflows/ci.yaml
@@ -132,14 +133,24 @@ env:
 
 # Supply chain: in the committed file every third-party action is pinned to a full commit
 # SHA with the tag in a trailing comment (uses: owner/action@<40-char sha> # v4).
-# Tags are shown here for readability. Dependabot proposes SHA updates.
+# Actions without a verified SHA use the zero PIN placeholder; replace each before use
+# (`devops-engineering` `assets/README.md`). Dependabot proposes SHA updates.
 jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Fails on any committed gradle-wrapper.jar, or a homoglyph-named copy, that is not an official
+      # Gradle release. min-wrapper-count 0: Flutter's android/.gitignore excludes the jar and
+      # flutter_tools injects it from the SDK cache, so a default project has none to check.
+      - name: Gradle wrapper jars are official
+        uses: gradle/actions/wrapper-validation@0000000000000000000000000000000000000000 # PIN gradle/actions v6.4.1
+        with:
+          min-wrapper-count: 0
+      - uses: subosito/flutter-action@0000000000000000000000000000000000000000 # PIN subosito/flutter-action v2.23.0
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -191,13 +202,19 @@ jobs:
   security:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action lists the pull request's commits to choose the range
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 } # full history: a secret removed in a later commit is still leaked
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0, persist-credentials: false } # full history: a secret removed in a later commit is still leaked
       - name: Secrets in history
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@0000000000000000000000000000000000000000 # PIN gitleaks/gitleaks-action v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Comments would need pull-requests: write, and the report artifact would outlive the job.
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
       - name: Known-vulnerable dependencies (OSV, reads pubspec.lock)
         run: |
           go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
@@ -207,10 +224,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@0000000000000000000000000000000000000000 # PIN actions/setup-java v6.2.0
         with: { distribution: temurin, java-version: '21' }
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@0000000000000000000000000000000000000000 # PIN subosito/flutter-action v2.23.0
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -228,7 +247,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Critical flow on an emulator
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@0000000000000000000000000000000000000000 # PIN reactivecircus/android-emulator-runner <version>
         with:
           api-level: 34
           arch: x86_64
@@ -238,8 +257,10 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@0000000000000000000000000000000000000000 # PIN subosito/flutter-action v2.23.0
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable

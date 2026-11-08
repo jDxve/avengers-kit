@@ -1,0 +1,55 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to .github/dependabot.yml (actionlint does not read this file; GitHub validates it on push).
+# Updates for GitHub Actions and every package ecosystem with a manifest in the repo
+# (devops-engineering CI; security-engineering references/40-supply-chain.md SEC-SUP-07).
+# Delete the entries for ecosystems the repo does not have. Dependabot proposes SHA updates for
+# pinned actions; the lockfile changes only in these pull requests (SEC-SUP-02).
+# cooldown: a version update waits 7 days after the release, so a bad or hijacked release has time
+# to be found and pulled. GitHub documents that cooldown does not apply to security updates, which
+# open as soon as an alert has a fix (Dependabot alerts and security updates are repository
+# settings Dave enables).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: npm
+    directory: / # <directory holding package.json, if not the root>
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: pub
+    directory: / # <directory holding pubspec.yaml, if not the root>
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: bundler
+    directory: / # <directory holding Gemfile, if not the root>
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: docker
+    directory: / # <directory holding the Dockerfile>
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

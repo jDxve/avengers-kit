@@ -1,0 +1,116 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to .github/workflows/ci-nestjs.yml. PR checks for a NestJS API, matching the CI gate in
+# nestjs-standards references/11-enforcing-this-automatically.md, plus a build and Trivy scan of the
+# runtime and migrate image targets (devops-engineering Artifacts, assets/Dockerfile.nestjs).
+# The dependency audit and secret scan are in ci-security.yml.
+name: ci-nestjs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-nestjs-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      # Disposable database for this job only. The password is a throwaway for the container,
+      # not a secret. Use the PostgreSQL major the project runs in production.
+      postgres:
+        image: 'postgres:<major version used in production>'
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Read by the app's env schema (nestjs-standards 4.3). Add every other required key with a
+      # test value, never a real one.
+      DATABASE_URL: postgres://app:app@localhost:5432/app_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@0000000000000000000000000000000000000000 # PIN actions/setup-node v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+
+      - run: npx --no-install tsc --noEmit
+      - run: npm run lint
+      - run: npx --no-install dependency-cruiser src --validate
+      - run: npm test
+      # drizzle-kit migrate against the disposable CI database. Never drizzle-kit push here
+      # (devops-engineering Database).
+      - name: Apply migrations to the CI database
+        run: npx --no-install drizzle-kit migrate
+      - name: End-to-end tests against the real database
+        run: npm run test:e2e
+      # After test:e2e, in the job that provides the e2e environment (api-contract 01).
+      - name: Committed openapi.json is current
+        run: npm run openapi:check
+
+      - name: Build the runtime and migrate images
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build --target runtime -t "app:$IMAGE_TAG" .
+          docker build --target migrate -t "app-migrate:$IMAGE_TAG" .
+      # Image scan (devops-engineering Artifacts, SEC-SUP-12). The report call lists MEDIUM and above,
+      # unfixed included, and never fails, so the full picture is in the log before a gate runs. Each
+      # gate fails on HIGH or CRITICAL that has a fixed version. Exceptions go in .trivyignore at the
+      # repo root (read by default): a comment with the reason and the owner, then the id with
+      # exp:YYYY-MM-DD (SEC-SUP-04). version pins the Trivy binary; bump it by hand in its own PR.
+      - name: Image vulnerabilities, runtime (report only)
+        uses: aquasecurity/trivy-action@0000000000000000000000000000000000000000 # PIN aquasecurity/trivy-action v0.36.0
+        with:
+          scan-type: image
+          image-ref: 'app:${{ github.sha }}'
+          scanners: vuln
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: '0'
+          version: v0.76.2
+          cache: 'false'
+      - name: Image vulnerabilities, runtime (fail on fixable HIGH and CRITICAL)
+        uses: aquasecurity/trivy-action@0000000000000000000000000000000000000000 # PIN aquasecurity/trivy-action v0.36.0
+        env:
+          TRIVY_SKIP_DB_UPDATE: 'true'
+          TRIVY_SKIP_JAVA_DB_UPDATE: 'true'
+        with:
+          scan-type: image
+          image-ref: 'app:${{ github.sha }}'
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          skip-setup-trivy: true
+          cache: 'false'
+      - name: Image vulnerabilities, migrate (fail on fixable HIGH and CRITICAL)
+        uses: aquasecurity/trivy-action@0000000000000000000000000000000000000000 # PIN aquasecurity/trivy-action v0.36.0
+        env:
+          TRIVY_SKIP_DB_UPDATE: 'true'
+          TRIVY_SKIP_JAVA_DB_UPDATE: 'true'
+        with:
+          scan-type: image
+          image-ref: 'app-migrate:${{ github.sha }}'
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          skip-setup-trivy: true
+          cache: 'false'

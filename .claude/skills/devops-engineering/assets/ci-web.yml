@@ -1,0 +1,87 @@
+# Template. Copy it, replace every PIN and <placeholder>, then run actionlint.
+# Copy to .github/workflows/ci-web.yml. PR checks for React or Next.js, in the order of
+# react-standards references/12-enforcing-this-automatically.md 11.9. The scripts are defined in
+# 11.4. The adoption profile (react-standards 03) decides which steps the project keeps:
+# baseline needs typecheck, lint, test, build; standard adds boundaries, api:check, size, test:e2e.
+# The dependency audit and secret scan are in ci-security.yml.
+name: ci-web
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-web-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@0000000000000000000000000000000000000000 # PIN actions/setup-node v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run lint:rules
+      - run: npm run boundaries
+      - name: Generated API types are current
+        env:
+          API_SCHEMA: '<committed openapi.json path or pinned schema URL, never a dev server>'
+        run: npm run api:check
+      - run: npm test
+      - run: npm run test:a11y
+
+      - run: npm run build
+      - run: npm run size
+      - run: npm run env:check
+
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+      # Self-hosted Next.js only (assets/Dockerfile.nextjs). Delete this step and the two scans below
+      # if the project ships no container image.
+      - name: Build the runtime image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: docker build --target runtime -t "app:$IMAGE_TAG" .
+      # Image scan (devops-engineering Artifacts, SEC-SUP-12). The report call lists MEDIUM and above,
+      # unfixed included, and never fails, so the full picture is in the log before a gate runs. Each
+      # gate fails on HIGH or CRITICAL that has a fixed version. Exceptions go in .trivyignore at the
+      # repo root (read by default): a comment with the reason and the owner, then the id with
+      # exp:YYYY-MM-DD (SEC-SUP-04). version pins the Trivy binary; bump it by hand in its own PR.
+      - name: Image vulnerabilities, runtime (report only)
+        uses: aquasecurity/trivy-action@0000000000000000000000000000000000000000 # PIN aquasecurity/trivy-action v0.36.0
+        with:
+          scan-type: image
+          image-ref: 'app:${{ github.sha }}'
+          scanners: vuln
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: '0'
+          version: v0.76.2
+          cache: 'false'
+      - name: Image vulnerabilities, runtime (fail on fixable HIGH and CRITICAL)
+        uses: aquasecurity/trivy-action@0000000000000000000000000000000000000000 # PIN aquasecurity/trivy-action v0.36.0
+        env:
+          TRIVY_SKIP_DB_UPDATE: 'true'
+          TRIVY_SKIP_JAVA_DB_UPDATE: 'true'
+        with:
+          scan-type: image
+          image-ref: 'app:${{ github.sha }}'
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          skip-setup-trivy: true
+          cache: 'false'
